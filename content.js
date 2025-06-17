@@ -1217,8 +1217,11 @@ function setVideoSpeed(speed) {
       
       // Check for next episode button more aggressively at high speeds
       const checkHighSpeedNextButton = () => {
-        const nextButton = document.querySelector('.vjs-next-button');
-        if (nextButton && !nextEpisodeClicked && settings.autoNextEpisode) {
+        // Проверяем оба возможных селектора кнопки следующей серии
+        const nextButton = document.querySelector('.vjs-next-button') || 
+                          document.querySelector('div.vjs-overlay.vjs-overlay-bottom-right.vjs-overlay-skip-intro.vjs-overlay-background');
+        
+        if (nextButton && isElementVisible(nextButton) && !nextEpisodeClicked && settings.autoNextEpisode) {
           console.log(`High speed: Next episode button found at ${numericSpeed}x speed`);
           checkForNextEpisodeButton();
         }
@@ -1813,9 +1816,15 @@ function checkForSkipButton() {
     return;
   }
   
-  const skipButton = document.querySelector('.vjs-skip-opening');
+  // Проверяем оба возможных селектора кнопки пропуска опенинга
+  let skipButton = document.querySelector('.vjs-skip-opening');
   
-  if (skipButton) {
+  // Если не нашли по первому селектору, пробуем второй
+  if (!skipButton) {
+    skipButton = document.querySelector('div.vjs-overlay.vjs-overlay-bottom-left.vjs-overlay-skip-intro.vjs-overlay-background');
+  }
+  
+  if (skipButton && isElementVisible(skipButton)) {
     console.log('Skip opening button found, clicking it');
     skipButtonClicked = true;
     skipButton.click();
@@ -1830,9 +1839,15 @@ function checkForNextEpisodeButton() {
     return;
   }
   
-  const nextButton = document.querySelector('.vjs-next-button');
+  // Проверяем оба возможных селектора кнопки следующей серии
+  let nextButton = document.querySelector('.vjs-next-button');
   
-  if (nextButton) {
+  // Если не нашли по первому селектору, пробуем второй
+  if (!nextButton) {
+    nextButton = document.querySelector('div.vjs-overlay.vjs-overlay-bottom-right.vjs-overlay-skip-intro.vjs-overlay-background');
+  }
+  
+  if (nextButton && isElementVisible(nextButton)) {
     console.log(`Next episode button found, clicking in ${settings.clickDelay} seconds`);
     nextEpisodeClicked = true;
     
@@ -1855,7 +1870,8 @@ function checkForNextEpisodeButton() {
       // If click didn't work, try direct navigation
       setTimeout(() => {
         // Check if we're still on the same page
-        const stillHasButton = document.querySelector('.vjs-next-button');
+        const stillHasButton = document.querySelector('.vjs-next-button') || 
+                               document.querySelector('div.vjs-overlay.vjs-overlay-bottom-right.vjs-overlay-skip-intro.vjs-overlay-background');
         if (stillHasButton && nextEpisodeClicked) {
           console.log('Next episode click may have failed, trying direct navigation');
           
@@ -1892,8 +1908,11 @@ function changeVideoSpeed(speed) {
       
       // Check for next episode button more aggressively at high speeds
       const checkHighSpeedNextButton = () => {
-        const nextButton = document.querySelector('.vjs-next-button');
-        if (nextButton && !nextEpisodeClicked && settings.autoNextEpisode) {
+        // Проверяем оба возможных селектора кнопки следующей серии
+        const nextButton = document.querySelector('.vjs-next-button') || 
+                          document.querySelector('div.vjs-overlay.vjs-overlay-bottom-right.vjs-overlay-skip-intro.vjs-overlay-background');
+        
+        if (nextButton && isElementVisible(nextButton) && !nextEpisodeClicked && settings.autoNextEpisode) {
           console.log(`High speed: Next episode button found at ${numericSpeed}x speed`);
           checkForNextEpisodeButton();
         }
