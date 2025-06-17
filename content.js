@@ -89,12 +89,93 @@ let isTransitioning = false; // Flag to track page transition process
 let fullscreenRetryCount = 0; // Counter for fullscreen restoration attempts
 let videoElement = null;      // Reference to the video element
 let observer = null;          // Mutation observer for DOM changes
+let skipButtonClicked = false; // Flag to track if skip button was clicked
+let nextEpisodeClicked = false; // Flag to track if next episode button was clicked
 
 /**
  * Global variables to track tab state
  */
 let isTabActive = true;
 let isInitialized = false;
+
+/**
+ * Toggles visibility of site elements for fullscreen mode
+ * @param {boolean} hide - true to hide elements, false to show them
+ */
+function toggleSiteElements(hide) {
+  // Elements to hide in fullscreen mode
+  const elementsToHide = [
+    '.header', 
+    '.menu_line',
+    '.content_shadow',
+    '.footer',
+    '.side_block',
+    '.side_block_left',
+    '.side_block_right',
+    '.side_block_top',
+    '.side_block_bottom',
+    '.notice_top2',
+    '.notice_cont',
+    '.notice',
+    '[class*="notice"]',
+    '[class*="popup"]',
+    '[class*="modal"]',
+    '[class*="overlay"]:not(.vjs-overlay-skip-intro)',
+    '.video_ad_content',
+    '.video_ad_text',
+    '.video_bottom_related',
+    '.video_bottom_title',
+    '.video_bottom_related_new',
+    '.video_bottom_title_new'
+  ];
+  
+  // Apply visibility changes
+  elementsToHide.forEach(selector => {
+    const elements = document.querySelectorAll(selector);
+    elements.forEach(element => {
+      if (hide) {
+        // Save original display style if not already saved
+        if (!element.dataset.originalDisplay) {
+          element.dataset.originalDisplay = element.style.display || '';
+        }
+        element.style.display = 'none';
+      } else {
+        // Restore original display style if available
+        if (element.dataset.originalDisplay) {
+          element.style.display = element.dataset.originalDisplay;
+        } else {
+          element.style.display = '';
+        }
+      }
+    });
+  });
+  
+  // Handle special case for video container
+  const videoContainer = document.querySelector('.video_plate');
+  if (videoContainer) {
+    if (hide) {
+      // Save original width if not already saved
+      if (!videoContainer.dataset.originalWidth) {
+        videoContainer.dataset.originalWidth = videoContainer.style.width || '';
+      }
+      // Make video container full width
+      videoContainer.style.width = '100%';
+      videoContainer.style.maxWidth = '100%';
+      videoContainer.style.margin = '0';
+      videoContainer.style.padding = '0';
+    } else {
+      // Restore original width if available
+      if (videoContainer.dataset.originalWidth) {
+        videoContainer.style.width = videoContainer.dataset.originalWidth;
+      } else {
+        videoContainer.style.width = '';
+      }
+      videoContainer.style.maxWidth = '';
+      videoContainer.style.margin = '';
+      videoContainer.style.padding = '';
+    }
+  }
+}
 
 // Initialization: trying to restore state from localStorage
 try {
@@ -1125,8 +1206,47 @@ function handlePageTransition(actionType = '') {
 function setVideoSpeed(speed) {
   const video = document.querySelector('video');
   if (video) {
-    video.playbackRate = parseFloat(speed);
+    const numericSpeed = parseFloat(speed);
+    video.playbackRate = numericSpeed;
     console.log(`Video speed set to ${speed}x`);
+    
+    // For high speeds, we need special handling
+    if (numericSpeed >= 5) {
+      console.log(`High speed detected (${numericSpeed}x), enabling special handling`);
+      
+      // Check for next episode button more aggressively at high speeds
+      const checkHighSpeedNextButton = () => {
+        const nextButton = document.querySelector('.vjs-next-button');
+        if (nextButton && !nextEpisodeClicked && settings.autoNextEpisode) {
+          console.log(`High speed: Next episode button found at ${numericSpeed}x speed`);
+          checkForNextEpisodeButton();
+        }
+      };
+      
+      // Set up periodic checks for the next episode button
+      const highSpeedInterval = setInterval(() => {
+        // Only continue if video is still playing at high speed
+        if (video.playbackRate < 5 || !isTabActive || document.hidden) {
+          console.log('High speed monitoring stopped');
+          clearInterval(highSpeedInterval);
+          return;
+        }
+        
+        checkHighSpeedNextButton();
+      }, 500); // Check every 500ms for high speeds
+      
+      // Clear interval when speed changes
+      const originalPlaybackRate = video.playbackRate;
+      const rateChangeHandler = () => {
+        if (video.playbackRate !== originalPlaybackRate) {
+          console.log('Playback rate changed, clearing high speed monitoring');
+          clearInterval(highSpeedInterval);
+          video.removeEventListener('ratechange', rateChangeHandler);
+        }
+      };
+      
+      video.addEventListener('ratechange', rateChangeHandler);
+    }
   }
 }
 
@@ -1715,10 +1835,38 @@ function checkForNextEpisodeButton() {
     console.log(`Next episode button found, clicking in ${settings.clickDelay} seconds`);
     nextEpisodeClicked = true;
     
+    // Adjust delay based on video speed for faster transitions at high speeds
+    let adjustedDelay = parseInt(settings.clickDelay) * 1000;
+    
+    // If video speed is high (5x or 10x), use shorter delay
+    const videoSpeed = parseFloat(settings.videoSpeed);
+    if (videoSpeed >= 5) {
+      // For high speeds, use much shorter delay
+      adjustedDelay = Math.max(500, adjustedDelay / videoSpeed);
+      console.log(`Using adjusted delay for high speed (${videoSpeed}x): ${adjustedDelay}ms`);
+    }
+    
     // Click after specified delay
     setTimeout(() => {
+      console.log('Auto-clicking next episode button');
       nextButton.click();
-    }, parseInt(settings.clickDelay) * 1000);
+      
+      // If click didn't work, try direct navigation
+      setTimeout(() => {
+        // Check if we're still on the same page
+        const stillHasButton = document.querySelector('.vjs-next-button');
+        if (stillHasButton && nextEpisodeClicked) {
+          console.log('Next episode click may have failed, trying direct navigation');
+          
+          // Try to find the next episode link
+          const nextEpisodeLink = document.querySelector('a.short-btn.green.video-page-next');
+          if (nextEpisodeLink && nextEpisodeLink.href) {
+            console.log('Found next episode link, navigating to:', nextEpisodeLink.href);
+            window.location.href = nextEpisodeLink.href;
+          }
+        }
+      }, 1000);
+    }, adjustedDelay);
   }
 }
 
@@ -1731,7 +1879,52 @@ function changeVideoSpeed(speed) {
   
   const video = document.querySelector('video');
   if (video) {
-    video.playbackRate = parseFloat(speed);
+    const numericSpeed = parseFloat(speed);
+    video.playbackRate = numericSpeed;
+    
+    // Update settings to remember this speed
+    settings.videoSpeed = speed;
+    
+    // For high speeds, we need special handling
+    if (numericSpeed >= 5) {
+      console.log(`High speed detected (${numericSpeed}x), enabling special handling`);
+      
+      // Check for next episode button more aggressively at high speeds
+      const checkHighSpeedNextButton = () => {
+        const nextButton = document.querySelector('.vjs-next-button');
+        if (nextButton && !nextEpisodeClicked && settings.autoNextEpisode) {
+          console.log(`High speed: Next episode button found at ${numericSpeed}x speed`);
+          checkForNextEpisodeButton();
+        }
+      };
+      
+      // Check immediately
+      checkHighSpeedNextButton();
+      
+      // And set up periodic checks
+      const highSpeedInterval = setInterval(() => {
+        // Only continue if video is still playing at high speed
+        if (video.playbackRate < 5 || !isTabActive || document.hidden) {
+          console.log('High speed monitoring stopped');
+          clearInterval(highSpeedInterval);
+          return;
+        }
+        
+        checkHighSpeedNextButton();
+      }, 500); // Check every 500ms for high speeds
+      
+      // Clear interval when speed changes
+      const originalPlaybackRate = video.playbackRate;
+      const rateChangeHandler = () => {
+        if (video.playbackRate !== originalPlaybackRate) {
+          console.log('Playback rate changed, clearing high speed monitoring');
+          clearInterval(highSpeedInterval);
+          video.removeEventListener('ratechange', rateChangeHandler);
+        }
+      };
+      
+      video.addEventListener('ratechange', rateChangeHandler);
+    }
   } else {
     console.log('Video element not found');
   }
