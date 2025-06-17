@@ -126,7 +126,8 @@ function toggleSiteElements(hide) {
     '.video_bottom_related',
     '.video_bottom_title',
     '.video_bottom_related_new',
-    '.video_bottom_title_new'
+    '.video_bottom_title_new',
+    '.info_panel.clear'
   ];
   
   // Apply visibility changes
