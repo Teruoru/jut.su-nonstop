@@ -8,6 +8,7 @@ const defaultSettings = {
     skipOpening: true,
     autoNextEpisode: true,
     fullscreenMode: true,
+    videoSpeed: '1',
     language: 'ru' // Default language: Russian
 };
 
@@ -19,6 +20,7 @@ const elements = {
     skipOpening: document.getElementById('skipOpening'),
     autoNextEpisode: document.getElementById('autoNextEpisode'),
     fullscreenMode: document.getElementById('fullscreenMode'),
+    videoSpeed: document.getElementById('videoSpeed'),
     languageToggle: document.getElementById('languageToggle'),
     allEpisodesButton: document.getElementById('allEpisodesButton'),
     ongoingButton: document.getElementById('ongoingButton')
@@ -37,6 +39,8 @@ function loadSettings() {
             if (key === 'languageToggle' || key === 'allEpisodesButton' || key === 'ongoingButton') continue;
             if (element && typeof settings[key] === 'boolean') {
                 element.checked = settings[key];
+            } else if (key === 'videoSpeed' && element) {
+                element.value = settings[key];
             }
         }
         
@@ -56,7 +60,11 @@ function saveSettings() {
     for (const [key, element] of Object.entries(elements)) {
         if (key === 'languageToggle' || key === 'allEpisodesButton' || key === 'ongoingButton') continue;
         if (element) {
-            settings[key] = element.checked;
+            if (key === 'videoSpeed') {
+                settings[key] = element.value;
+            } else {
+                settings[key] = element.checked;
+            }
         }
     }
     
@@ -93,19 +101,19 @@ function toggleLanguage() {
 }
 
 /**
- * Переход к списку всех серий текущего аниме
+ * Navigate to list of all episodes of current anime
  */
 function navigateToAllEpisodes() {
-    // Используем activeTab для получения URL текущей страницы
+    // Using activeTab to get URL of current page
     chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
         const currentUrl = tabs[0].url;
-        // Проверяем, находимся ли мы на странице эпизода
+        // Check if we are on episode page
         if (currentUrl.includes('jut.su') && currentUrl.includes('episode-')) {
-            // Извлекаем имя аниме из URL
+            // Extract anime name from URL
             const urlParts = currentUrl.split('/');
             let animeIndex = -1;
             
-            // Ищем индекс части URL с названием аниме
+            // Find index of URL part with anime name
             for (let i = 0; i < urlParts.length; i++) {
                 if (urlParts[i] === 'jut.su' && i + 1 < urlParts.length) {
                     animeIndex = i + 1;
@@ -115,15 +123,32 @@ function navigateToAllEpisodes() {
             
             if (animeIndex !== -1 && animeIndex < urlParts.length) {
                 const animeName = urlParts[animeIndex];
-                // Формируем URL для списка всех серий
+                // Form URL for list of all episodes
                 const allEpisodesUrl = `https://jut.su/${animeName}/`;
                 chrome.tabs.update(tabs[0].id, { url: allEpisodesUrl });
             } else {
-                console.log('Не удалось определить название аниме из URL');
+                console.log('Could not determine anime name from URL');
             }
         } else {
-            console.log('Текущая страница не является страницей эпизода');
+            console.log('Current page is not an episode page');
         }
+    });
+}
+
+/**
+ * Change video playback speed
+ */
+function changeVideoSpeed() {
+    const speed = elements.videoSpeed.value;
+    settings.videoSpeed = speed;
+    saveSettings();
+    
+    // Send message to content script to change speed
+    chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+        chrome.tabs.sendMessage(tabs[0].id, {
+            action: "changeSpeed",
+            speed: speed
+        });
     });
 }
 
@@ -134,12 +159,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Add event listeners for settings changes
     for (const [key, element] of Object.entries(elements)) {
-        if (key === 'languageToggle' || key === 'allEpisodesButton' || key === 'ongoingButton') continue;
+        if (key === 'languageToggle' || key === 'allEpisodesButton' || key === 'ongoingButton' || key === 'videoSpeed') continue;
         if (element) {
             element.addEventListener('change', () => {
                 saveSettings();
                 
-                // Отправляем сообщение в content script при изменении настроек
+                // Send message to content script when settings change
                 chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
                     chrome.tabs.sendMessage(tabs[0].id, {
                         action: "updateSettings",
@@ -151,6 +176,9 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     }
+    
+    // Add video speed change event listener
+    elements.videoSpeed.addEventListener('change', changeVideoSpeed);
     
     // Add language toggle event listener
     elements.languageToggle.addEventListener('click', toggleLanguage);

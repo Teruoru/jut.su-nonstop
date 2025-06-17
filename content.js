@@ -11,32 +11,32 @@
  */
 
 /**
- * Проверяет видимость элемента на странице
- * @param {Element} element - DOM элемент для проверки
- * @returns {boolean} true если элемент видим
+ * Checks if an element is visible on the page
+ * @param {Element} element - DOM element to check
+ * @returns {boolean} true if the element is visible
  */
 function isElementVisible(element) {
   if (!element) return false;
   
-  // Проверка на null и наличие в DOM
+  // Check for null and presence in DOM
   if (element.offsetParent === null) {
-    // Проверяем стили элемента для особых случаев (fixed position и т.д.)
+    // Check element styles for special cases (fixed position, etc.)
     const style = window.getComputedStyle(element);
     
-    // Если элемент имеет position: fixed, он может быть видимым даже с offsetParent === null
+    // If element has position: fixed, it may be visible even with offsetParent === null
     if (style.position === 'fixed') {
-      // Проверяем, не скрыт ли элемент другими способами
+      // Check if element is hidden by other means
       return style.display !== 'none' && 
              style.visibility !== 'hidden' && 
              style.opacity !== '0' &&
              parseInt(style.zIndex, 10) >= 0;
     }
     
-    // В обычном случае, если offsetParent === null, элемент невидим
+    // In normal case, if offsetParent === null, element is invisible
     return false;
   }
   
-  // Проверяем стили элемента
+  // Check element styles
   const style = window.getComputedStyle(element);
   if (style.display === 'none' || 
       style.visibility === 'hidden' || 
@@ -44,15 +44,15 @@ function isElementVisible(element) {
     return false;
   }
   
-  // Проверяем размеры элемента
+  // Check element dimensions
   const rect = element.getBoundingClientRect();
   if (rect.width === 0 || rect.height === 0) {
     return false;
   }
   
-  // Проверяем, находится ли элемент в области видимости окна
-  // Это необязательная проверка, так как элемент может быть за пределами экрана, но все равно считаться видимым
-  // Раскомментируйте при необходимости
+  // Check if element is in viewport
+  // This is an optional check, as element may be outside screen but still considered visible
+  // Uncomment if needed
   /*
   const windowHeight = window.innerHeight || document.documentElement.clientHeight;
   const windowWidth = window.innerWidth || document.documentElement.clientWidth;
@@ -69,7 +69,7 @@ function isElementVisible(element) {
 }
 
 /**
- * Настройки по умолчанию
+ * Default settings
  */
 let settings = {
   skipOpening: true,
@@ -80,23 +80,23 @@ let settings = {
 };
 
 /**
- * Глобальные переменные для сохранения состояния полноэкранного режима
- * Используем localStorage для сохранения состояния между перезагрузками страницы
+ * Global variables to save fullscreen mode state
+ * Using localStorage to preserve state between page reloads
  */
 let wasInFullscreen = false;
-let fullscreenRestoreAttempted = false; // Флаг для отслеживания попыток восстановления
-let isTransitioning = false; // Флаг для отслеживания процесса перехода между страницами
-let fullscreenRetryCount = 0; // Счетчик попыток восстановления полноэкрана
+let fullscreenRestoreAttempted = false; // Flag to track restoration attempts
+let isTransitioning = false; // Flag to track page transition process
+let fullscreenRetryCount = 0; // Counter for fullscreen restoration attempts
 let videoElement = null;      // Reference to the video element
 let observer = null;          // Mutation observer for DOM changes
 
 /**
- * Глобальные переменные для отслеживания состояния вкладки
+ * Global variables to track tab state
  */
 let isTabActive = true;
 let isInitialized = false;
 
-// Инициализация: пытаемся восстановить состояние из localStorage
+// Initialization: trying to restore state from localStorage
 try {
   const savedFullscreenState = localStorage.getItem('jutsu_fullscreen_state');
   if (savedFullscreenState === 'true') {
@@ -107,48 +107,48 @@ try {
   console.error('Error accessing localStorage:', e);
 }
 
-// Загружаем настройки из хранилища
+// Loading settings from storage
 browser.storage.sync.get(settings).then((items) => {
   settings = items;
   console.log('Settings loaded:', settings);
   
-  // Применяем настройки сразу после загрузки
+  // Apply settings immediately after loading
   
-  // Инициализируем обработчики событий полноэкранного режима, если включено
+  // Initialize fullscreen event handlers if enabled
   if (settings.fullscreenMode) {
     initFullscreenHandlers();
   }
 });
 
 /**
- * СИСТЕМА ЗАЩИТЫ ОТ ОВЕРКЛИКИНГА
+ * OVERCLICKING PROTECTION SYSTEM
  * 
- * Для добавления новых функций с защитой от спама используйте:
+ * To add new functions with spam protection, use:
  * 
  * 1. findAndClickSafely(actionType, selector, callback, options) 
- *    - для кликов по элементам
+ *    - for clicking elements
  * 
  * 2. performSafeAction(actionType, actionFunction, description)
- *    - для любых других действий
+ *    - for any other actions
  * 
  * 3. clickManager.performSafeClick(actionType, element, callback, options)
- *    - прямой доступ к менеджеру кликов
+ *    - direct access to click manager
  * 
- * Настройка кулдаунов:
+ * Cooldown configuration:
  * - clickManager.setCooldown('actionType', milliseconds)
  * - clickManager.updateGlobalCooldown(seconds)
  * 
- * Типы действий:
- * - 'skipOpening' - пропуск опенинга
- * - 'nextEpisode' - переход к следующей серии  
- * - 'videoControl' - управление видео
- * - 'sidebarToggle' - переключение боковой панели
- * - 'general' - общие действия
+ * Action types:
+ * - 'skipOpening' - skip opening
+ * - 'nextEpisode' - go to next episode
+ * - 'videoControl' - video control
+ * - 'sidebarToggle' - toggle sidebar
+ * - 'general' - general actions
  */
 
 /**
- * Проверяет, находится ли видео в полноэкранном режиме
- * @returns {boolean} true если в полноэкранном режиме
+ * Checks if video is in fullscreen mode
+ * @returns {boolean} true if in fullscreen mode
  */
 function isVideoInFullscreen() {
   const isFullscreen = !!(document.fullscreenElement || 
@@ -156,7 +156,7 @@ function isVideoInFullscreen() {
          document.webkitFullscreenElement || 
          document.msFullscreenElement);
   
-  // Проверяем также класс VideoJS для полноэкранного режима
+  // Also check VideoJS class for fullscreen mode
   const vjsPlayer = document.querySelector('.video-js');
   const hasFullscreenClass = vjsPlayer && vjsPlayer.classList.contains('vjs-fullscreen');
   
@@ -166,38 +166,38 @@ function isVideoInFullscreen() {
 }
 
 /**
- * Обрабатывает загрузку страницы и автоматически запускает воспроизведение видео
+ * Handles page loading and automatically starts video playback
  */
 function handlePageLoad() {
   console.log('Page loaded, handling autoplay...');
   console.log('Current fullscreen state:', wasInFullscreen);
   
-  // Проверяем, активна ли вкладка
+  // Check if tab is active
   if (!isTabActive) {
     console.log('Tab is not active, skipping autoplay on page load');
     return;
   }
   
-  // Сбрасываем флаг попытки восстановления при загрузке новой страницы
+  // Reset restoration attempt flag when loading a new page
   fullscreenRestoreAttempted = false;
   fullscreenRetryCount = 0;
   
-  // Даем странице время на инициализацию
+  // Give the page time to initialize
   setTimeout(() => {
-    // Если не нужно восстанавливать полноэкран, просто запускаем видео
+    // If no need to restore fullscreen, just start the video
     if (!wasInFullscreen) {
       console.log('No need to restore fullscreen, just starting playback');
       tryPlayVideo();
       return;
     }
     
-    // Если нужно восстановить полноэкран
+    // If need to restore fullscreen
     console.log('Need to restore fullscreen, starting playback with fullscreen');
     tryPlayVideo(true);
     
-    // Запускаем дополнительные попытки восстановления полноэкрана с интервалом
+    // Start additional attempts to restore fullscreen with interval
     const fullscreenInterval = setInterval(() => {
-      // Если вкладка стала неактивной, прекращаем попытки
+      // If tab became inactive, stop attempts
       if (!isTabActive) {
         console.log('Tab became inactive during fullscreen retry, clearing interval');
         clearInterval(fullscreenInterval);
@@ -206,21 +206,21 @@ function handlePageLoad() {
       
       fullscreenRetryCount++;
       
-      // Проверяем, удалось ли уже восстановить полноэкран
+      // Check if fullscreen was already restored
       if (isVideoInFullscreen()) {
         console.log('Fullscreen successfully restored, clearing retry interval');
         clearInterval(fullscreenInterval);
-        // Сбрасываем флаг, так как полноэкран успешно восстановлен
+        // Reset flag since fullscreen was successfully restored
         wasInFullscreen = false;
         localStorage.removeItem('jutsu_fullscreen_state');
         return;
       }
       
-      // Если превысили количество попыток, останавливаем
+      // If exceeded number of attempts, stop
       if (fullscreenRetryCount >= 5) {
         console.log('Max fullscreen retry count reached, giving up');
         clearInterval(fullscreenInterval);
-        // Сбрасываем флаг, так как не удалось восстановить полноэкран
+        // Reset flag since fullscreen couldn't be restored
         wasInFullscreen = false;
         localStorage.removeItem('jutsu_fullscreen_state');
         return;
@@ -233,21 +233,21 @@ function handlePageLoad() {
 }
 
 /**
- * Основная функция инициализации страницы
+ * Main page initialization function
  */
 function initializePage() {
   console.log('Initializing page...');
   
-  // Применяем настройки
+  // Apply settings
   if (settings.fullscreenMode) {
     initFullscreenHandlers();
   }
   
-  // Запускаем наблюдатель за изменениями DOM для обнаружения кнопок
+  // Start DOM mutation observer to detect buttons
   startButtonObserver();
 }
 
-// Наблюдатель за изменениями DOM для обнаружения кнопок
+// DOM mutation observer for button detection
 function startButtonObserver() {
   const observer = new MutationObserver(skipButton);
   observer.observe(document.body, {
@@ -268,33 +268,33 @@ window.addEventListener('load', () => {
   clickManager.setNavigating(false);
 });
 
-// Обработка загрузки страницы для восстановления полноэкранного режима
+// Handle page load for fullscreen mode restoration
 window.addEventListener('load', () => {
   handlePageTransition('pageLoad');
 });
 
-// Альтернативный метод для отслеживания перехода между страницами
+// Alternative method for tracking page transitions
 let lastUrl = location.href; 
 new MutationObserver(() => {
   const url = location.href;
   if (url !== lastUrl) {
     lastUrl = url;
     console.log('URL changed to', url);
-    setTimeout(() => handlePageTransition('urlChange'), 1500); // Небольшая задержка для полной загрузки плеера
+    setTimeout(() => handlePageTransition('urlChange'), 1500); // Small delay for complete player loading
   }
 }).observe(document, {subtree: true, childList: true});
 
-// Запускаем инициализацию после загрузки DOM
+// Start initialization after DOM loads
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
-    // Проверяем, что вкладка активна и инициализация еще не выполнена
+    // Check if tab is active and initialization has not been done yet
     if (isTabActive && !isInitialized) {
       initializePage();
       initialize();
     }
   });
 } else {
-  // Проверяем, что вкладка активна и инициализация еще не выполнена
+  // Check if tab is active and initialization has not been done yet
   if (isTabActive && !isInitialized) {
     initializePage();
     initialize();
@@ -302,342 +302,72 @@ if (document.readyState === 'loading') {
 }
 
 /**
- * Обработчик сообщений от попапа
+ * Message handler from popup
  */
 browser.runtime.onMessage.addListener(handleMessage);
 
 /**
- * Функция для пропуска опенинга и перехода к следующей серии
+ * Function for skipping opening and going to next episode
  */
 function skipButton() {
-  // Проверяем, активна ли вкладка
-  if (!isTabActive) {
-    // Если вкладка неактивна, не выполняем автоматические действия
+  // Skip only if inside tab is active and we're not navigating
+  if (!isTabActive || clickManager.isNavigating) {
     return;
   }
-
+  
+  // Check settings
   browser.storage.sync.get({
     skipOpening: true,
     autoNextEpisode: true
-  }).then((items) => {
-    if (items.skipOpening) {
-      // Находим кнопку пропуска опенинга
-      const skipOpeningButton = document.querySelector('div.vjs-overlay.vjs-overlay-bottom-left.vjs-overlay-skip-intro.vjs-overlay-background');
-      
-      // Если кнопка найдена, обрабатываем ее для полноэкранного режима
-      if (skipOpeningButton) {
-        handleSkipButtonAppearance(skipOpeningButton);
+  }).then((settings) => {
+    // Skip opening button
+    if (settings.skipOpening) {
+      const skipButton = document.querySelector('div.vjs-overlay.vjs-overlay-bottom-left.vjs-overlay-skip-intro.vjs-overlay-background');
+      if (skipButton && isElementVisible(skipButton)) {
+        handleSkipButtonAppearance(skipButton);
       }
-      
-      // Кликаем по кнопке, если включена соответствующая настройка
-      findAndClickSafely(
-        'skipOpening',
-        'div.vjs-overlay.vjs-overlay-bottom-left.vjs-overlay-skip-intro.vjs-overlay-background',
-        () => console.log("op skip"),
-        { removeAfterClick: true }
-      );
     }
-
-    if (items.autoNextEpisode) {
-      // Находим кнопку перехода к следующей серии
+    
+    // Auto next episode button
+    if (settings.autoNextEpisode) {
       const nextEpisodeButton = document.querySelector('div.vjs-overlay.vjs-overlay-bottom-right.vjs-overlay-skip-intro.vjs-overlay-background');
-      
-      // Если кнопка найдена, обрабатываем ее для полноэкранного режима
-      if (nextEpisodeButton) {
-        handleSkipButtonAppearance(nextEpisodeButton);
-      }
-      
-      // Используем функцию handlePageTransition для сохранения состояния полноэкранного режима
-      findAndClickSafely(
-        'nextEpisode',
-        'div.vjs-overlay.vjs-overlay-bottom-right.vjs-overlay-skip-intro.vjs-overlay-background',
-        () => {
-          handlePageTransition('nextEpisode');
-          console.log("next ep");
-        },
-        { removeAfterClick: true, blockAfterClick: true, blockDuration: 3000 }
-      );
-    }
-  });
-}
-
-/**
- * Скрывает или показывает элементы сайта в полноэкранном режиме
- * @param {boolean} hide - true для скрытия, false для показа
- */
-function toggleSiteElements(hide) {
-  console.log(`${hide ? 'Hiding' : 'Showing'} site elements for fullscreen mode`);
-  
-  // Список селекторов элементов для скрытия в полноэкранном режиме
-  const elementsToHide = [
-    '.header',
-    '.header_block',
-    '.menu',
-    '.content_block > .text',
-    '.title',
-    '.info_panel',
-    '.info_panel_arrow',
-    '.info',
-    '.logo',
-    '.footer',
-    '.footer.wrapper.z_fix',  // Добавленный класс футера
-    '.comments',
-    '.side_block',
-    '.side_block_right',
-    '.side_block_left',
-    '.scroll_top_button',
-    '.anime_padding',
-    '.anime_video_body > div:not(.video_plate)',
-    '.anime_video_body > h1',
-    '.anime_video_body > p',
-    '.anime_video_body_watch_online > div:not(.video_plate)',
-    '.notice_top2.notice_cont',  // Добавляем элемент, который остается поверх плеера
-    '.notice_top2',              // Дополнительный селектор
-    '.notice_cont',              // Дополнительный селектор
-    '.notice',                   // Общий класс для уведомлений
-    '.top_notice',               // Возможный класс верхних уведомлений
-    '[class*="notice"]',         // Любые элементы с "notice" в классе
-    '[class*="popup"]',          // Любые всплывающие окна
-    '[class*="modal"]',          // Любые модальные окна
-    '[class*="overlay"]',        // Любые оверлеи
-    '[style*="z-index"]'         // Элементы с явно заданным z-index
-  ];
-  
-  // Для каждого селектора находим элементы и скрываем/показываем их
-  elementsToHide.forEach(selector => {
-    const elements = document.querySelectorAll(selector);
-    elements.forEach(element => {
-      if (element) {
-        // Проверяем, не является ли элемент частью видеоплеера, кнопкой пропуска или кнопкой следующей серии
-        if (!element.classList.contains('video_plate') && 
-            !element.classList.contains('video-js') && 
-            !element.classList.contains('jutsu-custom-fullscreen') &&
-            !element.classList.contains('vjs-overlay-skip-intro') &&
-            !element.closest('.video_plate') && 
-            !element.closest('.video-js')) {
+      if (nextEpisodeButton && isElementVisible(nextEpisodeButton)) {
+        // Mark as navigating to prevent multiple clicks
+        clickManager.setNavigating(true);
+        
+        // Click the button
+        clickManager.performSafeClick('nextEpisode', nextEpisodeButton, () => {
+          console.log('Auto-clicking next episode button');
           
-          // Сохраняем оригинальное значение display для восстановления
-          if (hide) {
-            if (!element.dataset.originalDisplay) {
-              element.dataset.originalDisplay = element.style.display || '';
-            }
-            element.style.display = 'none';
-          } else {
-            // Восстанавливаем оригинальное значение display
-            if (element.dataset.originalDisplay !== undefined) {
-              element.style.display = element.dataset.originalDisplay;
-              delete element.dataset.originalDisplay;
-            } else {
-              element.style.display = '';
-            }
+          // Save fullscreen state before navigation
+          if (isVideoInFullscreen()) {
+            wasInFullscreen = true;
+            localStorage.setItem('jutsu_fullscreen_state', 'true');
           }
-        }
-      }
-    });
-  });
-  
-  // Поднимаем кнопки пропуска опенинга и перехода к следующей серии над плеером
-  if (hide) {
-    // Находим кнопки пропуска опенинга и перехода к следующей серии
-    const skipButtons = document.querySelectorAll('.vjs-overlay-skip-intro');
-    skipButtons.forEach(button => {
-      if (button) {
-        // Сохраняем оригинальные стили
-        if (!button.dataset.originalZIndex) {
-          button.dataset.originalZIndex = button.style.zIndex || '';
-        }
-        if (!button.dataset.originalPosition) {
-          button.dataset.originalPosition = button.style.position || '';
-        }
-        
-        // Поднимаем кнопки над плеером
-        button.style.zIndex = '1000000';
-        button.style.position = 'fixed';
-      }
-    });
-  } else {
-    // Восстанавливаем оригинальные стили кнопок
-    const skipButtons = document.querySelectorAll('.vjs-overlay-skip-intro');
-    skipButtons.forEach(button => {
-      if (button) {
-        if (button.dataset.originalZIndex !== undefined) {
-          button.style.zIndex = button.dataset.originalZIndex;
-          delete button.dataset.originalZIndex;
-        } else {
-          button.style.zIndex = '';
-        }
-        
-        if (button.dataset.originalPosition !== undefined) {
-          button.style.position = button.dataset.originalPosition;
-          delete button.dataset.originalPosition;
-        } else {
-          button.style.position = '';
-        }
-      }
-    });
-  }
-  
-  // Дополнительно находим все элементы с высоким z-index и скрываем их
-  if (hide) {
-    const allElements = document.querySelectorAll('*');
-    allElements.forEach(element => {
-      const style = window.getComputedStyle(element);
-      const zIndex = parseInt(style.zIndex);
-      
-      // Если элемент имеет z-index больше 1000 и не является частью видеоплеера или кнопкой пропуска
-      if (zIndex > 1000 && 
-          !element.classList.contains('video_plate') && 
-          !element.classList.contains('video-js') && 
-          !element.classList.contains('jutsu-custom-fullscreen') &&
-          !element.classList.contains('vjs-overlay-skip-intro') &&
-          !element.closest('.video_plate') && 
-          !element.closest('.video-js')) {
-        
-        console.log('Hiding high z-index element:', element, 'z-index:', zIndex);
-        
-        // Сохраняем оригинальные стили
-        if (!element.dataset.originalDisplay) {
-          element.dataset.originalDisplay = element.style.display || '';
-        }
-        if (!element.dataset.originalZIndex) {
-          element.dataset.originalZIndex = element.style.zIndex || '';
-        }
-        
-        // Скрываем элемент и устанавливаем низкий z-index
-        element.style.display = 'none';
-        element.style.zIndex = '-1';
-      }
-    });
-  } else {
-    // Восстанавливаем элементы с сохраненными z-index
-    const elementsWithSavedZIndex = document.querySelectorAll('[data-original-z-index]');
-    elementsWithSavedZIndex.forEach(element => {
-      if (element.dataset.originalDisplay !== undefined) {
-        element.style.display = element.dataset.originalDisplay;
-        delete element.dataset.originalDisplay;
-      }
-      if (element.dataset.originalZIndex !== undefined) {
-        element.style.zIndex = element.dataset.originalZIndex;
-        delete element.dataset.originalZIndex;
-      }
-    });
-  }
-  
-  // Настраиваем стиль контейнера видео для полноэкранного режима
-  const videoContainer = document.querySelector('.video_plate');
-  if (videoContainer) {
-    if (hide) {
-      // Сохраняем оригинальные стили перед изменением
-      if (!videoContainer.dataset.originalWidth) {
-        videoContainer.dataset.originalWidth = videoContainer.style.width || '';
-      }
-      if (!videoContainer.dataset.originalHeight) {
-        videoContainer.dataset.originalHeight = videoContainer.style.height || '';
-      }
-      if (!videoContainer.dataset.originalMaxWidth) {
-        videoContainer.dataset.originalMaxWidth = videoContainer.style.maxWidth || '';
-      }
-      if (!videoContainer.dataset.originalMargin) {
-        videoContainer.dataset.originalMargin = videoContainer.style.margin || '';
-      }
-      if (!videoContainer.dataset.originalPadding) {
-        videoContainer.dataset.originalPadding = videoContainer.style.padding || '';
-      }
-      if (!videoContainer.dataset.originalZIndex) {
-        videoContainer.dataset.originalZIndex = videoContainer.style.zIndex || '';
-      }
-      if (!videoContainer.dataset.originalPosition) {
-        videoContainer.dataset.originalPosition = videoContainer.style.position || '';
-      }
-      if (!videoContainer.dataset.originalTop) {
-        videoContainer.dataset.originalTop = videoContainer.style.top || '';
-      }
-      if (!videoContainer.dataset.originalLeft) {
-        videoContainer.dataset.originalLeft = videoContainer.style.left || '';
-      }
-      
-      // Применяем стили для полноэкранного режима
-      videoContainer.style.width = '100%';
-      videoContainer.style.height = '100vh';
-      videoContainer.style.maxWidth = '100%';
-      videoContainer.style.margin = '0';
-      videoContainer.style.padding = '0';
-      videoContainer.style.zIndex = '99999';
-      videoContainer.style.position = 'fixed';
-      videoContainer.style.top = '0';
-      videoContainer.style.left = '0';
-    } else {
-      // Восстанавливаем оригинальные стили
-      if (videoContainer.dataset.originalWidth) {
-        videoContainer.style.width = videoContainer.dataset.originalWidth;
-      } else {
-        videoContainer.style.width = '';
-      }
-      
-      if (videoContainer.dataset.originalHeight) {
-        videoContainer.style.height = videoContainer.dataset.originalHeight;
-      } else {
-        videoContainer.style.height = '';
-      }
-      
-      if (videoContainer.dataset.originalMaxWidth) {
-        videoContainer.style.maxWidth = videoContainer.dataset.originalMaxWidth;
-      } else {
-        videoContainer.style.maxWidth = '';
-      }
-      
-      if (videoContainer.dataset.originalMargin) {
-        videoContainer.style.margin = videoContainer.dataset.originalMargin;
-      } else {
-        videoContainer.style.margin = '';
-      }
-      
-      if (videoContainer.dataset.originalPadding) {
-        videoContainer.style.padding = videoContainer.dataset.originalPadding;
-      } else {
-        videoContainer.style.padding = '';
-      }
-      
-      if (videoContainer.dataset.originalZIndex) {
-        videoContainer.style.zIndex = videoContainer.dataset.originalZIndex;
-      } else {
-        videoContainer.style.zIndex = '';
-      }
-      
-      if (videoContainer.dataset.originalPosition) {
-        videoContainer.style.position = videoContainer.dataset.originalPosition;
-      } else {
-        videoContainer.style.position = '';
-      }
-      
-      if (videoContainer.dataset.originalTop) {
-        videoContainer.style.top = videoContainer.dataset.originalTop;
-      } else {
-        videoContainer.style.top = '';
-      }
-      
-      if (videoContainer.dataset.originalLeft) {
-        videoContainer.style.left = videoContainer.dataset.originalLeft;
-      } else {
-        videoContainer.style.left = '';
+          
+          // Handle page transition
+          handlePageTransition('nextEpisode');
+        });
       }
     }
-  }
+  }).catch(error => {
+    console.error('Error getting settings:', error);
+  });
 }
 
 /**
- * Создает и применяет стили для расширенного полноэкранного режима
- * Поднимает плеер поверх всех элементов и растягивает на весь экран
- * @param {boolean} enable - true для активации, false для деактивации
+ * Creates and applies styles for extended fullscreen mode
+ * Raises player above all elements and stretches to full screen
+ * @param {boolean} enable - true to activate, false to deactivate
  */
 function applyCustomFullscreen(enable) {
-  // Проверяем, включена ли функция полноэкранного режима
+  // Check if fullscreen feature is enabled
   if (!settings.fullscreenMode && enable) {
     console.log('Fullscreen mode disabled in settings');
     return;
   }
   
-  // Проверяем, активна ли вкладка
+  // Check if tab is active
   if (!isTabActive) {
     console.log('Tab is not active, skipping custom fullscreen');
     return;
@@ -645,25 +375,25 @@ function applyCustomFullscreen(enable) {
   
   console.log(`${enable ? 'Enabling' : 'Disabling'} custom fullscreen mode`);
   
-  // Находим контейнер плеера
+  // Find player container
   const playerContainer = document.querySelector('.video-js') || document.querySelector('#my-player');
   if (!playerContainer) {
     console.log('Player container not found');
     return;
   }
   
-  // Находим родительский элемент плеера
+  // Find player parent element
   const playerParent = playerContainer.parentElement;
   if (!playerParent) {
     console.log('Player parent not found');
     return;
   }
   
-  // Находим контейнер видео
+  // Find video container
   const videoContainer = document.querySelector('.video_plate');
   
   if (enable) {
-    // Сохраняем оригинальные стили для восстановления
+    // Save original styles for restoration
     if (!playerContainer.dataset.originalWidth) {
       playerContainer.dataset.originalWidth = playerContainer.style.width || '';
     }
@@ -677,7 +407,7 @@ function applyCustomFullscreen(enable) {
       playerContainer.dataset.originalZIndex = playerContainer.style.zIndex || '';
     }
     
-    // Сохраняем оригинальные стили для видео-контейнера
+    // Save original styles for video container
     if (videoContainer) {
       if (!videoContainer.dataset.originalWidth) {
         videoContainer.dataset.originalWidth = videoContainer.style.width || '';
@@ -705,7 +435,7 @@ function applyCustomFullscreen(enable) {
       }
     }
     
-    // Создаем стили для расширенного полноэкранного режима
+    // Create styles for extended fullscreen mode
     const customFullscreenStyle = document.createElement('style');
     customFullscreenStyle.id = 'jutsu-custom-fullscreen-style';
     customFullscreenStyle.textContent = `
@@ -739,7 +469,7 @@ function applyCustomFullscreen(enable) {
         z-index: 1000000 !important;
       }
       
-      /* Стили для кнопок пропуска опенинга и перехода к следующей серии */
+      /* Styles for skip opening and next episode buttons */
       .vjs-overlay-skip-intro {
         z-index: 1000001 !important;
         position: fixed !important;
@@ -748,13 +478,13 @@ function applyCustomFullscreen(enable) {
         pointer-events: auto !important;
       }
       
-      /* Стиль для кнопки пропуска опенинга (обычно слева внизу) */
+      /* Style for skip opening button (usually bottom-left) */
       .vjs-overlay-bottom-left.vjs-overlay-skip-intro {
         bottom: 70px !important;
         left: 20px !important;
       }
       
-      /* Стиль для кнопки перехода к следующей серии (обычно справа внизу) */
+      /* Style for next episode button (usually bottom-right) */
       .vjs-overlay-bottom-right.vjs-overlay-skip-intro {
         bottom: 70px !important;
         right: 20px !important;
@@ -764,7 +494,7 @@ function applyCustomFullscreen(enable) {
         overflow: hidden !important;
       }
       
-      /* Скрываем все уведомления и элементы с высоким z-index */
+      /* Hide all notifications and elements with high z-index */
       body.jutsu-fullscreen-active .notice_top2,
       body.jutsu-fullscreen-active .notice_cont,
       body.jutsu-fullscreen-active .notice,
@@ -780,26 +510,26 @@ function applyCustomFullscreen(enable) {
     `;
     document.head.appendChild(customFullscreenStyle);
     
-    // Добавляем классы для активации полноэкранного режима
+    // Add classes to activate fullscreen mode
     playerContainer.classList.add('jutsu-custom-fullscreen');
     document.body.classList.add('jutsu-fullscreen-active');
     
-    // Скрываем элементы сайта
+    // Hide site elements
     toggleSiteElements(true);
     
     console.log('Custom fullscreen mode enabled');
   } else {
-    // Удаляем стили расширенного полноэкранного режима
+    // Remove extended fullscreen mode styles
     const customFullscreenStyle = document.getElementById('jutsu-custom-fullscreen-style');
     if (customFullscreenStyle) {
       customFullscreenStyle.remove();
     }
     
-    // Удаляем классы полноэкранного режима
+    // Remove fullscreen classes
     playerContainer.classList.remove('jutsu-custom-fullscreen');
     document.body.classList.remove('jutsu-fullscreen-active');
     
-    // Восстанавливаем оригинальные стили плеера
+    // Restore original player styles
     if (playerContainer.dataset.originalWidth) {
       playerContainer.style.width = playerContainer.dataset.originalWidth;
     }
@@ -813,7 +543,7 @@ function applyCustomFullscreen(enable) {
       playerContainer.style.zIndex = playerContainer.dataset.originalZIndex;
     }
     
-    // Восстанавливаем оригинальные стили для видео-контейнера
+    // Restore original styles for video container
     if (videoContainer) {
       if (videoContainer.dataset.originalWidth) {
         videoContainer.style.width = videoContainer.dataset.originalWidth;
@@ -864,7 +594,7 @@ function applyCustomFullscreen(enable) {
       }
     }
     
-    // Показываем элементы сайта
+    // Show site elements
     toggleSiteElements(false);
     
     console.log('Custom fullscreen mode disabled');
@@ -878,18 +608,18 @@ function handleFullscreenChange() {
   isFullscreen = !!document.fullscreenElement;
   console.log('Fullscreen state changed:', isFullscreen);
   
-  // Применяем кастомный полноэкранный режим, если нативный полноэкран отключен
+  // Apply custom fullscreen mode if native fullscreen is disabled
   if (!isFullscreen && settings.fullscreenMode) {
     console.log('Native fullscreen exited, applying custom fullscreen');
     applyCustomFullscreen(true);
   } else {
-    // В нативном полноэкранном режиме отключаем кастомный
+    // In native fullscreen mode, disable custom fullscreen
     applyCustomFullscreen(false);
   }
 }
 
 /**
- * Принудительно активирует полноэкранный режим всеми доступными методами
+ * Force fullscreen mode using all available methods
  */
 function forceFullscreen() {
   console.log('Forcing fullscreen mode...');
@@ -900,19 +630,19 @@ function forceFullscreen() {
     return;
   }
   
-  // Скрываем элементы сайта перед входом в полноэкранный режим
+  // Hide site elements before entering fullscreen mode
   toggleSiteElements(true);
   
-  // Метод 1: Прямое нажатие на кнопку полноэкранного режима
+  // Method 1: Direct click on fullscreen button
   const fullscreenButton = vjsPlayer.querySelector('.vjs-fullscreen-control');
   if (fullscreenButton) {
     console.log('Forcing click on fullscreen button');
     
-    // Показываем элементы управления
+    // Show control elements
     vjsPlayer.classList.add('vjs-user-active');
     vjsPlayer.classList.remove('vjs-user-inactive');
     
-    // Симулируем движение мыши над плеером
+    // Simulate mouse movement over player
     const moveEvent = new MouseEvent('mousemove', {
       view: window,
       bubbles: true,
@@ -922,7 +652,7 @@ function forceFullscreen() {
     });
     vjsPlayer.dispatchEvent(moveEvent);
     
-    // Симулируем нажатие на кнопку
+    // Simulate button click
     try {
       ['mouseover', 'mouseenter', 'mousedown', 'mouseup', 'click'].forEach(eventName => {
         const event = new MouseEvent(eventName, {
@@ -939,7 +669,7 @@ function forceFullscreen() {
     }
   }
   
-  // Метод 2: API VideoJS
+  // Method 2: VideoJS API
   try {
     if (typeof videojs !== 'undefined' && vjsPlayer.id) {
       const player = videojs(vjsPlayer.id);
@@ -956,7 +686,7 @@ function forceFullscreen() {
     console.error('Error forcing fullscreen via VideoJS API:', e);
   }
   
-  // Метод 3: Нативный API полноэкранного режима
+  // Method 3: Native API for fullscreen mode
   try {
     console.log('Forcing fullscreen via native API');
     if (vjsPlayer.requestFullscreen) {
@@ -972,7 +702,7 @@ function forceFullscreen() {
     console.error('Error forcing fullscreen via native API:', e);
   }
   
-  // Метод 4: Программное добавление класса полноэкранного режима
+  // Method 4: Programmatic addition of fullscreen class
   try {
     console.log('Adding fullscreen class programmatically');
     vjsPlayer.classList.add('vjs-fullscreen');
@@ -983,30 +713,30 @@ function forceFullscreen() {
 }
 
 /**
- * Функция для нажатия на кнопку полноэкранного режима
- * @returns {boolean} true если удалось нажать на кнопку
+ * Function to click fullscreen button
+ * @returns {boolean} true if button was clicked
  */
 const clickFullscreenButton = () => {
   console.log('Attempting to click fullscreen button...');
   
-  // Находим плеер и кнопку полноэкранного режима
+  // Find player and fullscreen button
   const vjsPlayer = document.querySelector('.video-js');
   if (!vjsPlayer) {
     console.log('VideoJS player not found for fullscreen');
-    // Используем кастомный полноэкранный режим как запасной вариант
+    // Use custom fullscreen as a fallback option
     applyCustomFullscreen(true);
     return false;
   }
   
-  // Сначала показываем элементы управления, симулируя движение мыши над плеером
+  // First show control elements, simulating mouse movement over player
   console.log('Showing player controls by simulating mouse movement');
   
   try {
-    // Добавляем классы, которые показывают элементы управления
+    // Add classes that show control elements
     vjsPlayer.classList.add('vjs-user-active');
     vjsPlayer.classList.remove('vjs-user-inactive');
     
-    // Симулируем движение мыши над плеером
+    // Simulate mouse movement over player
     const moveEvent = new MouseEvent('mousemove', {
       view: window,
       bubbles: true,
@@ -1021,14 +751,14 @@ const clickFullscreenButton = () => {
     console.error('Error showing player controls:', e);
   }
   
-  // Пробуем несколько методов для нажатия на кнопку полноэкранного режима
+  // Try multiple methods to click fullscreen button
   
-  // Метод 1: Прямой поиск кнопки полноэкранного режима
+  // Method 1: Direct search for fullscreen button
   const fullscreenButton = vjsPlayer.querySelector('.vjs-fullscreen-control');
   if (fullscreenButton) {
     console.log('Fullscreen button found, clicking it');
     
-    // Симулируем последовательность событий мыши
+    // Simulate full click sequence
     try {
       ['mouseover', 'mouseenter', 'mousedown', 'mouseup', 'click'].forEach(eventName => {
         const event = new MouseEvent(eventName, {
@@ -1050,7 +780,7 @@ const clickFullscreenButton = () => {
     console.log('Fullscreen button not found via direct selector');
   }
   
-  // Метод 2: Поиск через XPath
+  // Method 2: Search via XPath
   try {
     const xpathExpressions = [
       '//button[@title="Полноэкранный режим"]',
@@ -1085,7 +815,7 @@ const clickFullscreenButton = () => {
     console.error('Error using XPath to find fullscreen button:', e);
   }
   
-  // Метод 3: Прямой запрос полноэкранного режима для плеера
+  // Method 3: Direct request for fullscreen mode for player element
   try {
     console.log('Requesting fullscreen directly for player element');
     vjsPlayer.requestFullscreen();
@@ -1094,7 +824,7 @@ const clickFullscreenButton = () => {
     console.error('Error requesting fullscreen directly:', e);
   }
   
-  // Если все методы не сработали, используем кастомный полноэкранный режим
+  // If all methods fail, use custom fullscreen
   console.log('All native fullscreen methods failed, using custom fullscreen');
   applyCustomFullscreen(true);
   
@@ -1102,11 +832,11 @@ const clickFullscreenButton = () => {
 };
 
 /**
- * Пытается запустить воспроизведение видео различными методами
- * @param {boolean} restoreFullscreen - нужно ли восстанавливать полноэкран после запуска
+ * Tries to start video playback using different methods
+ * @param {boolean} restoreFullscreen - should we restore fullscreen after playback
  */
 function tryPlayVideo(restoreFullscreen = false) {
-  // Проверяем, активна ли вкладка
+  // Check if tab is active
   if (!isTabActive) {
     console.log('Tab is not active, skipping video playback');
     return;
@@ -1114,17 +844,17 @@ function tryPlayVideo(restoreFullscreen = false) {
   
   console.log('Trying to play video, restore fullscreen:', restoreFullscreen);
   
-  // Метод 1: Используем безопасный клик по селектору CSS
+  // Method 1: Using safe click on CSS selector
   findAndClickSafely('autoPlay', '.vjs-big-play-button', (button) => {
     console.log('Auto-clicking play button via CSS selector');
     
-    // Если нужно восстановить полноэкран
+    // If need to restore fullscreen
     if (restoreFullscreen && !fullscreenRestoreAttempted && isTabActive) {
       fullscreenRestoreAttempted = true;
       
-      // Небольшая задержка, чтобы видео начало воспроизводиться
+      // Small delay to allow video to start playing
       setTimeout(() => {
-        // Повторная проверка активности вкладки перед входом в полноэкран
+        // Check tab activity before entering fullscreen
         if (!isTabActive) {
           console.log('Tab became inactive during fullscreen restoration, aborting');
           return;
@@ -1139,9 +869,9 @@ function tryPlayVideo(restoreFullscreen = false) {
     }
   });
   
-  // Метод 2: Прямой доступ к видео элементу
+  // Method 2: Direct access to video element
   setTimeout(() => {
-    // Повторная проверка активности вкладки
+    // Check tab activity
     if (!isTabActive) {
       console.log('Tab became inactive during direct play attempt, aborting');
       return;
@@ -1153,11 +883,11 @@ function tryPlayVideo(restoreFullscreen = false) {
         videoElement.play().then(() => {
           console.log('Video started playing via direct play method');
           
-          // Если нужно восстановить полноэкран и еще не пытались
+          // If need to restore fullscreen and not already attempted
           if (restoreFullscreen && !fullscreenRestoreAttempted && isTabActive) {
             fullscreenRestoreAttempted = true;
             setTimeout(() => {
-              // Еще одна проверка активности вкладки
+              // Another check tab activity
               if (!isTabActive) {
                 console.log('Tab became inactive during fullscreen restoration, aborting');
                 return;
@@ -1178,17 +908,17 @@ function tryPlayVideo(restoreFullscreen = false) {
     }
   }, 1500);
   
-  // Метод 3: Поиск через XPath
+  // Method 3: Search via XPath
   setTimeout(() => {
-    // Повторная проверка активности вкладки
+    // Check tab activity
     if (!isTabActive) {
       console.log('Tab became inactive during XPath play attempt, aborting');
       return;
     }
     
-    // Если первый метод не сработал, пробуем XPath
+    // If first method failed, try XPath
     try {
-      // Если уже пытались восстановить полноэкран, не делаем этого снова
+      // If already attempted to restore fullscreen, don't do it again
       if (fullscreenRestoreAttempted && restoreFullscreen) {
         console.log('Fullscreen restore already attempted, skipping XPath method');
         return;
@@ -1196,19 +926,19 @@ function tryPlayVideo(restoreFullscreen = false) {
       
       console.log('Trying to find play button via XPath...');
       
-      // XPath для кнопки воспроизведения
+      // XPath for play button
       const xpathExpressions = [
-        // Основной XPath из примера
+        // Main XPath from example
         '/html/body/div[5]/div/div/div/div[4]/div[1]/div[1]/div[2]/div[2]/div[1]/button',
-        // Более гибкий XPath для поиска большой кнопки воспроизведения
+        // More flexible XPath for finding large play button
         '//div[contains(@class, "video-js")]//button[contains(@class, "vjs-big-play-button")]',
-        // Альтернативный XPath для поиска по атрибуту title
+        // Alternative XPath for finding by title attribute
         '//button[@title="Воспроизвести видео"]',
-        // Поиск по классу внутри video-js
+        // Search by class inside video-js
         '//div[@class="video-js"]//button[@class="vjs-big-play-button"]'
       ];
       
-      // Пробуем разные XPath выражения
+      // Try different XPath expressions
       let playButton = null;
       for (const xpath of xpathExpressions) {
         const result = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null);
@@ -1222,13 +952,13 @@ function tryPlayVideo(restoreFullscreen = false) {
       if (playButton) {
         console.log('Found play button via XPath, clicking it');
         performSafeAction('xpathPlay', () => {
-          // Повторная проверка активности вкладки
+          // Check tab activity
           if (!isTabActive) {
             console.log('Tab became inactive before XPath click, aborting');
             return false;
           }
           
-          // Симулируем полную последовательность кликов
+          // Simulate full click sequence
           const simulateMouseEvent = (element, eventName) => {
             const event = new MouseEvent(eventName, {
               view: window,
@@ -1244,13 +974,13 @@ function tryPlayVideo(restoreFullscreen = false) {
           simulateMouseEvent(playButton, 'mouseup');
           playButton.click();
           
-          // Если был в полноэкранном режиме и еще не пытались восстановить
+          // If was in fullscreen mode and not already attempted to restore
           if (restoreFullscreen && !fullscreenRestoreAttempted && isTabActive) {
             fullscreenRestoreAttempted = true;
             
-            // Немедленно пытаемся нажать на кнопку полноэкранного режима
+            // Immediately try to click fullscreen button
             setTimeout(() => {
-              // Еще одна проверка активности вкладки
+              // Another check tab activity
               if (!isTabActive) {
                 console.log('Tab became inactive during fullscreen restoration, aborting');
                 return;
@@ -1273,16 +1003,16 @@ function tryPlayVideo(restoreFullscreen = false) {
     }
   }, 2000);
   
-  // Метод 4: Прямой доступ к API VideoJS
+  // Method 4: Direct access to VideoJS API
   setTimeout(() => {
-    // Повторная проверка активности вкладки
+    // Check tab activity
     if (!isTabActive) {
       console.log('Tab became inactive during VideoJS API attempt, aborting');
       return;
     }
     
     try {
-      // Если уже пытались восстановить полноэкран, не делаем этого снова
+      // If already attempted to restore fullscreen, don't do it again
       if (fullscreenRestoreAttempted && restoreFullscreen) {
         console.log('Fullscreen restore already attempted, skipping VideoJS API method');
         return;
@@ -1296,13 +1026,13 @@ function tryPlayVideo(restoreFullscreen = false) {
           console.log('VideoJS API found, playing video...');
           player.play();
           
-          // После начала воспроизведения активируем полноэкран
+          // After starting playback, activate fullscreen
           if (restoreFullscreen && !fullscreenRestoreAttempted && isTabActive) {
             fullscreenRestoreAttempted = true;
             
-            // Немедленная активация полноэкрана через API
+            // Immediate fullscreen activation via API
             setTimeout(() => {
-              // Еще одна проверка активности вкладки
+              // Another check tab activity
               if (!isTabActive) {
                 console.log('Tab became inactive during fullscreen restoration, aborting');
                 return;
@@ -1327,35 +1057,35 @@ function tryPlayVideo(restoreFullscreen = false) {
 }
 
 /**
- * Обрабатывает переход между страницами
- * @param {string} actionType - тип действия, вызвавшего переход (для логирования)
+ * Handles page transition
+ * @param {string} actionType - type of action causing transition (for logging)
  */
 function handlePageTransition(actionType = '') {
-  // Проверяем, активна ли вкладка
+  // Check if tab is active
   if (!isTabActive) {
     console.log('Tab is not active, skipping page transition handling');
     return;
   }
   
-  // Если не нужно сохранять полноэкранный режим, просто выходим
+  // If don't need to save fullscreen mode, just exit
   if (!settings.fullscreenMode) {
     console.log('Fullscreen preservation disabled in settings, not saving state');
     return;
   }
   
-  // Если уже в процессе перехода, не сохраняем состояние повторно
+  // If already in transition process, don't save state again
   if (isTransitioning) {
     return;
   }
   
-  // Устанавливаем флаг перехода
+  // Set transition flag
   isTransitioning = true;
   
-  // Сохраняем состояние полноэкранного режима перед переходом
+  // Save fullscreen mode state before transition
   const isFullscreen = isVideoInFullscreen();
   wasInFullscreen = isFullscreen;
   
-  // Сохраняем состояние в localStorage для восстановления после перезагрузки страницы
+  // Save state to localStorage for restoration after page reload
   try {
     if (isFullscreen) {
       localStorage.setItem('jutsu_fullscreen_state', 'true');
@@ -1373,43 +1103,35 @@ function handlePageTransition(actionType = '') {
     console.log(`Fullscreen state NOT saved before navigation (${actionType}): FALSE`);
   }
   
-  // Сбрасываем флаги
+  // Reset flags
   fullscreenRestoreAttempted = false;
   fullscreenRetryCount = 0;
   
-  // Сбрасываем флаг перехода через некоторое время
+  // Reset transition flag after some time
   setTimeout(() => {
     isTransitioning = false;
   }, 2000);
   
-  // Если переход произошел, запускаем обработчик загрузки страницы
+  // If transition happened, start page load handler
   setTimeout(() => {
     handlePageLoad();
   }, 1000);
 }
 
 /**
- * Устанавливает скорость воспроизведения видео с защитой от спама
- * @param {string} speed - Скорость воспроизведения
+ * Sets video playback speed with spam protection
+ * @param {string} speed - Playback speed value
  */
 function setVideoSpeed(speed) {
-  if (!clickManager.canPerformAction('videoControl')) {
-      console.log('Video speed change blocked due to cooldown');
-      return false;
-  }
-
   const video = document.querySelector('video');
   if (video) {
-      clickManager.clickTimes.set('videoControl', Date.now());
-      video.playbackRate = parseFloat(speed);
-      console.log(`Video speed changed to ${speed}x`);
-      return true;
+    video.playbackRate = parseFloat(speed);
+    console.log(`Video speed set to ${speed}x`);
   }
-  return false;
 }
 
 /**
- * Применяет сохраненные настройки при загрузке страницы
+ * Applies saved settings when page loads
  */
 function applySettings() {
   browser.storage.sync.get({
@@ -1425,19 +1147,19 @@ function applySettings() {
       if (settings.videoSpeed !== '1') {
           setVideoSpeed(settings.videoSpeed);
       }
-      // Обновляем задержку между кликами в менеджере
+      // Update click delay in click manager
       clickManager.updateGlobalCooldown(parseInt(settings.clickDelay));
   });
 }
 
 /**
- * Универсальный менеджер кликов с защитой от спама
+ * Universal click manager with spam protection
  */
 class ClickManager {
     constructor() {
-        this.clickTimes = new Map(); // Хранит время последних кликов по типам действий
-        this.blockedActions = new Set(); // Заблокированные действия
-        this.defaultCooldown = 3000; // По умолчанию 3 секунды
+        this.clickTimes = new Map(); // Stores time of last clicks by action type
+        this.blockedActions = new Set(); // Blocked actions
+        this.defaultCooldown = 3000; // Default 3 seconds
         this.isNavigating = false;
         this.cooldowns = {
             skipOpening: 3000,
@@ -1449,17 +1171,17 @@ class ClickManager {
     }
 
     /**
-     * Устанавливает кулдаун для конкретного типа действия
-     * @param {string} actionType - Тип действия
-     * @param {number} cooldown - Кулдаун в миллисекундах
+     * Sets cooldown for specific action type
+     * @param {string} actionType - Action type
+     * @param {number} cooldown - Cooldown in milliseconds
      */
     setCooldown(actionType, cooldown) {
         this.cooldowns[actionType] = cooldown;
     }
 
     /**
-     * Обновляет общий кулдаун для всех действий
-     * @param {number} seconds - Кулдаун в секундах
+     * Updates global cooldown for all actions
+     * @param {number} seconds - Cooldown in seconds
      */
     updateGlobalCooldown(seconds) {
         const cooldown = seconds * 1000;
@@ -1469,9 +1191,9 @@ class ClickManager {
     }
 
     /**
-     * Проверяет можно ли выполнить действие
-     * @param {string} actionType - Тип действия
-     * @returns {boolean} true если действие можно выполнить
+     * Checks if action can be performed
+     * @param {string} actionType - Action type
+     * @returns {boolean} true if action can be performed
      */
     canPerformAction(actionType) {
         if (this.isNavigating && (actionType === 'nextEpisode' || actionType === 'skipOpening')) {
@@ -1490,12 +1212,12 @@ class ClickManager {
     }
 
     /**
-     * Выполняет защищенный клик
-     * @param {string} actionType - Тип действия
-     * @param {Element} element - Элемент для клика
-     * @param {Function} callback - Колбэк после клика (опционально)
-     * @param {Object} options - Дополнительные опции
-     * @returns {boolean} true если клик был выполнен
+     * Performs safe click
+     * @param {string} actionType - Action type
+     * @param {Element} element - Element to click
+     * @param {Function} callback - Callback after click (optional)
+     * @param {Object} options - Additional options
+     * @returns {boolean} true if click was performed
      */
     performSafeClick(actionType, element, callback = null, options = {}) {
         if (!element || !isElementVisible(element)) {
@@ -1506,30 +1228,30 @@ class ClickManager {
             return false;
         }
 
-        // Записываем время клика
+        // Record click time
         this.clickTimes.set(actionType, Date.now());
 
-        // Выполняем клик
+        // Perform click
         try {
             element.click();
             console.log(`Safe click performed: ${actionType}`);
 
-            // Удаляем элемент если указано
+            // Remove element if specified
             if (options.removeAfterClick) {
                 element.remove();
             }
 
-            // Блокируем действие если указано
+            // Block action if specified
             if (options.blockAfterClick) {
                 this.blockAction(actionType, options.blockDuration || 5000);
             }
 
-            // Устанавливаем флаг навигации для переходов
+            // Set navigation flag for transitions
             if (actionType === 'nextEpisode') {
                 this.setNavigating(true, 5000);
             }
 
-            // Выполняем колбэк
+            // Perform callback
             if (callback && typeof callback === 'function') {
                 callback();
             }
@@ -1542,9 +1264,9 @@ class ClickManager {
     }
 
     /**
-     * Блокирует действие на определенное время
-     * @param {string} actionType - Тип действия
-     * @param {number} duration - Длительность блокировки в миллисекундах
+     * Blocks action for specified time
+     * @param {string} actionType - Action type
+     * @param {number} duration - Duration of blocking in milliseconds
      */
     blockAction(actionType, duration = 5000) {
         this.blockedActions.add(actionType);
@@ -1554,9 +1276,9 @@ class ClickManager {
     }
 
     /**
-     * Устанавливает состояние навигации
-     * @param {boolean} navigating - Флаг навигации
-     * @param {number} duration - Длительность в миллисекундах
+     * Sets navigation state
+     * @param {boolean} navigating - Navigation flag
+     * @param {number} duration - Duration in milliseconds
      */
     setNavigating(navigating, duration = 5000) {
         this.isNavigating = navigating;
@@ -1568,7 +1290,7 @@ class ClickManager {
     }
 
     /**
-     * Сбрасывает все состояния
+     * Resets all states
      */
     reset() {
         this.clickTimes.clear();
@@ -1577,16 +1299,16 @@ class ClickManager {
     }
 }
 
-// Создаем глобальный экземпляр менеджера кликов
+// Create global click manager instance
 const clickManager = new ClickManager();
 
 /**
- * Универсальная функция для безопасного поиска и клика по элементам
- * @param {string} actionType - Тип действия для логирования и кулдауна
- * @param {string} selector - CSS селектор элемента
- * @param {Function} callback - Колбэк после успешного клика
- * @param {Object} options - Дополнительные опции
- * @returns {boolean} true если клик был выполнен
+ * Universal function for safe search and click on elements
+ * @param {string} actionType - Action type for logging and cooldown
+ * @param {string} selector - CSS selector of element
+ * @param {Function} callback - Callback after successful click
+ * @param {Object} options - Additional options
+ * @returns {boolean} true if click was performed
  */
 function findAndClickSafely(actionType, selector, callback = null, options = {}) {
     const element = document.querySelector(selector);
@@ -1594,11 +1316,11 @@ function findAndClickSafely(actionType, selector, callback = null, options = {})
 }
 
 /**
- * Универсальная функция для безопасного выполнения действий с элементами
- * @param {string} actionType - Тип действия
- * @param {Function} actionFunction - Функция для выполнения
- * @param {string} description - Описание действия для логирования
- * @returns {boolean} true если действие было выполнено
+ * Universal function for safe execution of actions on elements
+ * @param {string} actionType - Action type
+ * @param {Function} actionFunction - Function to execute
+ * @param {string} description - Description of action for logging
+ * @returns {boolean} true if action was performed
  */
 function performSafeAction(actionType, actionFunction, description = '') {
     if (!clickManager.canPerformAction(actionType)) {
@@ -1618,12 +1340,12 @@ function performSafeAction(actionType, actionFunction, description = '') {
 }
 
 /**
- * Активирует полноэкранный режим для видеоплеера
+ * Activates fullscreen mode for video player
  */
 function activateFullscreen() {
   console.log('Attempting to restore fullscreen mode...');
   
-  // Проверяем необходимость восстановления
+  // Check if we need to restore
   if (!wasInFullscreen) {
     console.log('No need to restore fullscreen - was not in fullscreen before');
     return false;
@@ -1631,14 +1353,14 @@ function activateFullscreen() {
   
   console.log('RESTORING FULLSCREEN - was in fullscreen before!');
   
-  // Сбрасываем флаг, так как мы уже пытаемся восстановить
+  // Reset flag since we're already trying to restore
   wasInFullscreen = false;
   
-  // Функция перевода в полноэкран видеоплеера VideoJS с несколькими методами
+  // Video player fullscreen function with multiple methods
   const activateVideoAndFullscreen = function() {
     console.log('Looking for VideoJS player...');
     
-    // Находим плеер VideoJS
+    // Find VideoJS player
     const vjsPlayer = document.querySelector('.video-js');
     if (!vjsPlayer) {
       console.log('VideoJS player not found, retrying in 2s...');
@@ -1648,10 +1370,10 @@ function activateFullscreen() {
     
     console.log('VideoJS player found!', vjsPlayer);
     
-    // Скрываем элементы сайта перед входом в полноэкранный режим
+    // Hide site elements before entering fullscreen mode
     toggleSiteElements(true);
     
-    // МЕТОД 1: Прямой доступ к API VideoJS
+    // METHOD 1: Direct access to VideoJS API
     if (typeof videojs !== 'undefined' && vjsPlayer.id) {
       try {
         console.log('Trying direct VideoJS API access for fullscreen...');
@@ -1659,7 +1381,7 @@ function activateFullscreen() {
         if (player) {
           console.log('VideoJS API found, setting fullscreen...');
           
-          // Активируем полноэкран через API
+          // Activate fullscreen via API
           if (player.requestFullscreen) {
             player.requestFullscreen();
             console.log('Fullscreen requested via VideoJS API');
@@ -1677,19 +1399,19 @@ function activateFullscreen() {
       }
     }
     
-    // МЕТОД 2: Кнопка полноэкранного режима
+    // METHOD 2: Fullscreen button
     const fullscreenButton = vjsPlayer.querySelector('.vjs-fullscreen-control');
     if (fullscreenButton) {
       console.log('Fullscreen button found, simulating click...');
       
-      // Функция для симуляции полной последовательности кликов
+      // Function to simulate full click sequence
       function fullClickSequence(element) {
         if (!element) return false;
         
         console.log('Performing full click sequence on fullscreen button');
         
         try {
-          // Создаем и запускаем события мыши
+          // Create and dispatch mouse events
           ['mouseover', 'mouseenter', 'mousedown', 'mouseup', 'click'].forEach(eventName => {
             const event = new MouseEvent(eventName, {
               view: window,
@@ -1714,7 +1436,7 @@ function activateFullscreen() {
       console.log('Fullscreen button not found!');
     }
     
-    // МЕТОД 3: Нативный API полноэкранного режима
+    // METHOD 3: Native API fullscreen mode
     console.log('Using native fullscreen API...');
     try {
       if (vjsPlayer.requestFullscreen) {
@@ -1737,13 +1459,13 @@ function activateFullscreen() {
     }
   };
 
-  // Запускаем с задержкой, чтобы страница успела загрузиться полностью
+  // Start with delay to allow page to fully load
   setTimeout(activateVideoAndFullscreen, 1000);
   return true;
 }
 
 /**
- * Инициализирует обработчики событий полноэкранного режима
+ * Initializes fullscreen event handlers
  */
 function initFullscreenHandlers() {
   console.log('Initializing fullscreen handlers');
@@ -1754,7 +1476,7 @@ function initFullscreenHandlers() {
 }
 
 /**
- * Удаляет обработчики событий полноэкранного режима
+ * Removes fullscreen event handlers
  */
 function removeFullscreenHandlers() {
   console.log('Removing fullscreen handlers');
@@ -1763,7 +1485,7 @@ function removeFullscreenHandlers() {
   document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
   document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
   
-  // Восстанавливаем видимость элементов сайта
+  // Restore site elements visibility
   toggleSiteElements(false);
 }
 
@@ -1773,7 +1495,7 @@ function removeFullscreenHandlers() {
 function initialize() {
   console.log('Jut.su NonStop: Initializing...');
   
-  // Отмечаем, что инициализация выполнена
+  // Mark initialization as done
   isInitialized = true;
   
   // Load settings from storage
@@ -1784,11 +1506,11 @@ function initialize() {
     // Set up mutation observer to detect DOM changes
     setupMutationObserver();
     
-    // Apply custom fullscreen if enabled and вкладка активна
+    // Apply custom fullscreen if enabled and tab is active
     if (settings.fullscreenMode && isTabActive) {
       setTimeout(() => {
         applyCustomFullscreen(true);
-      }, 2000); // Задержка для полной загрузки плеера
+      }, 2000); // Delay for full player load
     }
     
     console.log('Jut.su NonStop: Initialization complete');
@@ -1843,29 +1565,29 @@ function handleMessage(message) {
   
   switch (message.action) {
     case 'updateSettings':
-      // Обновляем настройки
+      // Update settings
       Object.assign(settings, message.settings);
       console.log('Settings updated:', settings);
       
-      // Применяем новые настройки
+      // Apply new settings
       if ('fullscreenMode' in message.settings) {
         if (message.settings.fullscreenMode) {
-          // Если включен полноэкранный режим, применяем его
+          // If fullscreen mode is enabled, apply it
           initFullscreenHandlers();
           
-          // Применяем полноэкранный режим только если вкладка активна
+          // Apply fullscreen mode only if tab is active
           if (isTabActive) {
             console.log('Applying fullscreen mode after settings change');
             applyCustomFullscreen(true);
           }
         } else {
-          // Если отключен полноэкранный режим, отключаем его
+          // If fullscreen mode is disabled, remove it
           removeFullscreenHandlers();
           
-          // Принудительно отключаем полноэкранный режим и восстанавливаем исходное состояние
+          // Force disable fullscreen mode and restore original state
           console.log('Disabling fullscreen mode after settings change');
           
-          // Выходим из нативного полноэкранного режима
+          // Exit native fullscreen mode
           if (document.fullscreenElement) {
             console.log('Exiting native fullscreen');
             document.exitFullscreen().catch(err => {
@@ -1873,10 +1595,10 @@ function handleMessage(message) {
             });
           }
           
-          // Отключаем кастомный полноэкранный режим
+          // Disable custom fullscreen mode
           applyCustomFullscreen(false);
           
-          // Сбрасываем флаг, чтобы не восстанавливать полноэкран при переходах
+          // Reset flag to not restore fullscreen during navigation
           wasInFullscreen = false;
           localStorage.removeItem('jutsu_fullscreen_state');
         }
@@ -1902,7 +1624,7 @@ function handleMessage(message) {
 function onVideoPlaying() {
   console.log('Video started playing');
   
-  // Проверяем, активна ли вкладка
+  // Check if tab is active
   if (!isTabActive) {
     console.log('Tab is not active, skipping fullscreen actions');
     return;
@@ -1912,27 +1634,27 @@ function onVideoPlaying() {
   skipButtonClicked = false;
   nextEpisodeClicked = false;
   
-  // Если в настройках включен полноэкранный режим
+  // If fullscreen mode is enabled in settings
   if (settings.fullscreenMode && !document.fullscreenElement) {
     console.log('Fullscreen mode enabled in settings');
     
-    // Сначала пробуем нативный полноэкранный режим
+    // First try native fullscreen mode
     if (videoElement) {
       try {
         videoElement.requestFullscreen().catch(err => {
           console.error('Error attempting to enable native fullscreen:', err);
-          // Если нативный полноэкран не сработал, используем кастомный
+          // If native fullscreen failed, use custom fullscreen
           console.log('Falling back to custom fullscreen');
           applyCustomFullscreen(true);
         });
       } catch (e) {
         console.error('Exception in requestFullscreen:', e);
-        // Если произошла ошибка, используем кастомный полноэкран
+        // If error occurred, use custom fullscreen
         console.log('Falling back to custom fullscreen after exception');
         applyCustomFullscreen(true);
       }
     } else {
-      // Если видеоэлемент не найден, используем кастомный полноэкран
+      // If video element not found, use custom fullscreen
       console.log('Video element not found, using custom fullscreen');
       applyCustomFullscreen(true);
     }
@@ -1946,16 +1668,16 @@ function onVideoPlaying() {
 function checkFullscreenRestore() {
   console.log('Checking if fullscreen needs to be enabled based on settings');
   
-  // Определяем необходимость входа в полноэкран на основе настроек
+  // Determine if we need to enter fullscreen based on settings
   if (settings.fullscreenMode) {
     console.log('Auto fullscreen enabled in settings');
-    // Запускаем воспроизведение с входом в полноэкран
+    // Start playback with fullscreen mode
     setTimeout(() => {
       tryPlayVideo(true);
     }, 1500);
   } else {
     console.log('Auto fullscreen disabled in settings');
-    // Просто запускаем воспроизведение без полноэкрана
+    // Just start playback without fullscreen
     setTimeout(() => {
       tryPlayVideo(false);
     }, 1500);
@@ -2035,35 +1757,29 @@ function onDOMContentLoaded() {
     // Listen for video playing event to handle auto-skip and fullscreen restoration
     videoElement.addEventListener('playing', onVideoPlaying);
     
-    // Автоматически запускаем воспроизведение только если вкладка активна
+    // Automatically start playback only if tab is active
     if (isTabActive) {
-      setTimeout(() => {
-        // Если в настройках включен автоматический вход в полноэкран
-        const shouldEnterFullscreen = settings.fullscreenMode;
-        tryPlayVideo(shouldEnterFullscreen);
-      }, 1000);
-    } else {
-      console.log('Tab is not active, skipping auto-play');
+      checkFullscreenRestore();
     }
   } else {
-    console.log('Video element not found');
+    console.log('Video element not found on page load');
   }
 }
 
 /**
- * Обрабатывает появление кнопок пропуска опенинга и перехода к следующей серии
- * @param {Element} button - Кнопка, которую нужно обработать
+ * Handle appearance of skip opening and next episode buttons
+ * @param {Element} button - Button to process
  */
 function handleSkipButtonAppearance(button) {
   if (!button || !isElementVisible(button)) return;
   
   console.log('Skip button appeared, ensuring it is visible in fullscreen mode');
   
-  // Проверяем, находимся ли мы в полноэкранном режиме
+  // Check if we are in fullscreen mode
   const isFullscreen = isVideoInFullscreen() || document.body.classList.contains('jutsu-fullscreen-active');
   
   if (isFullscreen) {
-    // Сохраняем оригинальные стили
+    // Save original styles
     if (!button.dataset.originalZIndex) {
       button.dataset.originalZIndex = button.style.zIndex || '';
     }
@@ -2071,22 +1787,22 @@ function handleSkipButtonAppearance(button) {
       button.dataset.originalPosition = button.style.position || '';
     }
     
-    // Поднимаем кнопку над плеером
+    // Raise button above player
     button.style.zIndex = '1000001';
     button.style.position = 'fixed';
     
-    // Устанавливаем позицию в зависимости от класса кнопки
+    // Set position depending on button class
     if (button.classList.contains('vjs-overlay-bottom-left')) {
-      // Кнопка пропуска опенинга
+      // Skip opening button
       button.style.bottom = '70px';
       button.style.left = '20px';
     } else if (button.classList.contains('vjs-overlay-bottom-right')) {
-      // Кнопка перехода к следующей серии
+      // Next episode button
       button.style.bottom = '70px';
       button.style.right = '20px';
     }
     
-    // Обеспечиваем видимость
+    // Ensure visibility
     button.style.visibility = 'visible';
     button.style.opacity = '1';
     button.style.pointerEvents = 'auto';
@@ -2104,15 +1820,15 @@ function setupMutationObserver() {
   observer = new MutationObserver(mutations => {
     mutations.forEach(mutation => {
       if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-        // Проверяем добавленные узлы на наличие кнопок пропуска
+        // Check added nodes for skip buttons
         mutation.addedNodes.forEach(node => {
           if (node.nodeType === Node.ELEMENT_NODE) {
-            // Проверяем, является ли добавленный узел кнопкой пропуска
+            // Check if added node is a skip button
             if (node.classList && node.classList.contains('vjs-overlay-skip-intro')) {
               handleSkipButtonAppearance(node);
             }
             
-            // Проверяем, содержит ли добавленный узел кнопки пропуска
+            // Check if added node contains skip buttons
             const skipButtons = node.querySelectorAll('.vjs-overlay-skip-intro');
             skipButtons.forEach(button => handleSkipButtonAppearance(button));
           }
@@ -2135,47 +1851,47 @@ function setupMutationObserver() {
 }
 
 /**
- * Обработчики событий активности вкладки
+ * Tab activity event handlers
  */
 document.addEventListener('visibilitychange', handleVisibilityChange);
 
 /**
- * Обработчик изменения видимости вкладки
+ * Handle tab visibility change
  */
 function handleVisibilityChange() {
   const wasActive = isTabActive;
   isTabActive = document.visibilityState === 'visible';
   console.log('Tab visibility changed:', isTabActive ? 'active' : 'inactive');
   
-  // Если вкладка стала неактивной
+  // If tab became inactive
   if (!isTabActive && wasActive) {
     console.log('Tab became inactive, pausing video and disabling fullscreen');
     
-    // Приостанавливаем воспроизведение видео
+    // Pause video playback
     if (videoElement && !videoElement.paused) {
       videoElement.pause();
       console.log('Video paused due to tab becoming inactive');
     }
     
-    // Отключаем полноэкранный режим
+    // Disable fullscreen mode
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(err => {
         console.error('Error exiting fullscreen:', err);
       });
     }
     
-    // Отключаем кастомный полноэкранный режим
+    // Disable custom fullscreen mode
     applyCustomFullscreen(false);
   }
-  // Если вкладка стала активной и расширение уже инициализировано
+  // If tab became active and extension is already initialized
   else if (isTabActive && !wasActive && isInitialized) {
     console.log('Tab became active, checking state');
     
-    // Если плеер существует и нужно восстановить полноэкран
+    // If player exists and need to restore fullscreen
     if (settings.fullscreenMode && wasInFullscreen) {
       console.log('Restoring fullscreen on tab activation');
       
-      // Запускаем воспроизведение и восстанавливаем полноэкран
+      // Start playback and restore fullscreen
       setTimeout(() => {
         if (videoElement) {
           videoElement.play().catch(err => {
@@ -2183,11 +1899,11 @@ function handleVisibilityChange() {
           });
         }
         
-        // Применяем кастомный полноэкран
+        // Apply custom fullscreen
         applyCustomFullscreen(true);
       }, 500);
     }
-    // Если расширение еще не инициализировано, инициализируем его
+    // If extension is not initialized yet, initialize it
     else if (!isInitialized) {
       console.log('Initializing extension on tab activation');
       initializePage();

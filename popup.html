@@ -143,6 +143,26 @@
         .action-button:hover {
             background-color: #45a049;
         }
+        
+        /* Стили для селектора скорости */
+        .speed-control {
+            margin-bottom: 15px;
+        }
+        
+        .speed-control select {
+            width: 100%;
+            padding: 8px;
+            background-color: #2d422a;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            margin-top: 5px;
+        }
+        
+        .speed-control select:focus {
+            outline: none;
+            border: 1px solid #4CAF50;
+        }
     </style>
 </head>
 <body>
@@ -178,6 +198,22 @@
                 <input type="checkbox" id="fullscreenMode" checked>
                 <span class="slider"></span>
             </label>
+        </div>
+        
+        <div class="speed-control">
+            <span class="option-label" data-lang-ru="Скорость воспроизведения" data-lang-en="Playback speed">Скорость воспроизведения</span>
+            <select id="videoSpeed">
+                <option value="0.25">0.25x</option>
+                <option value="0.5">0.5x</option>
+                <option value="0.75">0.75x</option>
+                <option value="1" selected>1x</option>
+                <option value="1.25">1.25x</option>
+                <option value="1.5">1.5x</option>
+                <option value="1.75">1.75x</option>
+                <option value="2">2x</option>
+                <option value="5">5x</option>
+                <option value="10">10x</option>
+            </select>
         </div>
         
         <div class="button-container">
