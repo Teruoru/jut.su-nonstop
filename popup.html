@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Jut.su NonStop</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            width: 300px;
+            background-color: #1c2b1a; /* Темно-зеленый фон как на сайте */
+            color: #ffffff;
+        }
+        
+        .header {
+            background-color: #1c2b1a;
+            border-bottom: 1px solid #2d422a;
+            padding: 10px 15px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffffff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-title {
+            flex-grow: 1;
+            text-align: center;
+        }
+        
+        .language-toggle {
+            cursor: pointer;
+            color: #4CAF50;
+            font-size: 14px;
+            padding: 3px 6px;
+            border-radius: 3px;
+            border: 1px solid #4CAF50;
+        }
+        
+        .content {
+            padding: 15px;
+        }
+        
+        .option {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .option-label {
+            font-size: 14px;
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #2d422a;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider {
+            background-color: #4CAF50;
+        }
+        
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        
+        .footer {
+            font-size: 12px;
+            text-align: center;
+            padding: 10px;
+            border-top: 1px solid #2d422a;
+            color: #aaaaaa;
+        }
+        
+        /* Разделитель между секциями */
+        .section-title {
+            font-size: 16px;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            color: #4CAF50;
+            border-bottom: 1px solid #2d422a;
+            padding-bottom: 5px;
+        }
+        
+        /* Стили для кнопок */
+        .button-container {
+            display: flex;
+            justify-content: center;
+            margin: 15px 0;
+        }
+        
+        .action-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 14px;
+            margin: 0 5px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        
+        .action-button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-title">Jut.su NonStop</div>
+        <div class="language-toggle" id="languageToggle">EN</div>
+    </div>
+    
+    <div class="content">
+        <div class="section-title" data-lang-ru="Автоматизация" data-lang-en="Automation">Автоматизация</div>
+        
+        <div class="option">
+            <span class="option-label" data-lang-ru="Автопропуск опенингов" data-lang-en="Auto-skip openings">Автопропуск опенингов</span>
+            <label class="switch">
+                <input type="checkbox" id="skipOpening" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+        
+        <div class="option">
+            <span class="option-label" data-lang-ru="Автопереход к следующей серии" data-lang-en="Auto-play next episode">Автопереход к следующей серии</span>
+            <label class="switch">
+                <input type="checkbox" id="autoNextEpisode" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+        
+        <div class="section-title" data-lang-ru="Улучшения интерфейса" data-lang-en="Interface improvements">Улучшения интерфейса</div>
+        
+        <div class="option">
+            <span class="option-label" data-lang-ru="Полноэкранный режим" data-lang-en="Fullscreen mode">Полноэкранный режим</span>
+            <label class="switch">
+                <input type="checkbox" id="fullscreenMode" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+        
+        <div class="button-container">
+            <button id="allEpisodesButton" class="action-button" data-lang-ru="Список всех серий" data-lang-en="All Episodes">Список всех серий</button>
+            <button id="ongoingButton" class="action-button" data-lang-ru="Онгоинги" data-lang-en="Ongoing">Онгоинги</button>
+        </div>
+    </div>
+    
+    <div class="footer">
+        <span data-lang-ru="Версия 0.5 | Автоматизация просмотра аниме" data-lang-en="Version 0.5 | Anime watching automation">Версия 0.5 | Автоматизация просмотра аниме</span>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>

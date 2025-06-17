@@ -1,0 +1,10 @@
+{
+    "extensionName": {
+      "message": "Jut.su NonStop",
+      "description": "Название расширения"
+    },
+    "extensionDescription": {
+      "message": "Расширение для автоматизации просмотра аниме на сайте jut.su",
+      "description": "Описание расширения"
+    }
+  }

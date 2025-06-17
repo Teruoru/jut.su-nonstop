@@ -1,0 +1,33 @@
+{
+  "manifest_version": 2,
+  "name": "__MSG_extensionName__",
+  "version": "0.5",
+  "description": "__MSG_extensionDescription__",
+  "icons": {
+    "48": "icon.png",
+    "96": "icon.png"
+  },
+  "permissions": [
+    "*://jut.su/*",
+    "storage",
+    "activeTab"
+  ],
+  "browser_action": {
+    "default_icon": "icon.png",
+    "default_title": "Jut.su NonStop",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.jut.su/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "jutsu-nonstop@example.com",
+      "strict_min_version": "139.0"
+    }
+  },
+  "default_locale": "ru"
+}

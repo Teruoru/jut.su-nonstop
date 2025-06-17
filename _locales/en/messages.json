@@ -1,0 +1,10 @@
+{
+    "extensionName": {
+      "message": "Jut.su NonStop",
+      "description": "Name of the extension"
+    },
+    "extensionDescription": {
+      "message": "Extension for automating anime watching on jut.su website",
+      "description": "Description of the extension"
+    }
+  }
